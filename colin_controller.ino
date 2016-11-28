@@ -1,10 +1,24 @@
 #include <DifferentialDrive.h>
 #include <Colin.h>
 #include <TimerOne.h>
+#include <Wire.h>
 
-const char SOP = '<';
-const char EOP = '>';
-const char DEL = ',';
+#define SONAR_ADDRESS        0x8
+#define OWN_ADDRESS          0x6
+#define NUM_SONAR              8
+#define SONAR_PER_CONTROLLER   8
+#define NUM_CONTROLLERS        1
+
+int sonarDistances[NUM_SONAR]; // array of ping times from sonar sensors
+const uint8_t x = 1; // meaningless value to trigger update
+const double speedOfSound = 0.0343; // in cm/microsecond
+bool distancesRead = false;
+
+const char SOP = '<'; // designates start of packet
+const char EOP = '>'; // designates end of packet
+const char DEL = ','; // delimits between values
+const char SON = 'S'; // designates sonar packet
+const char ODT = 'O'; // designates odometry packet
 
 bool started = false;
 bool ended = false;
@@ -39,6 +53,10 @@ void setup() {
   // set PID gains for each motor
   rhSpeedControl.setGains(kP, kI, kD);
   lhSpeedControl.setGains(kP, kI, kD);
+  
+  // begin communication with sonar controller
+  Wire.begin(OWN_ADDRESS);
+  Wire.onReceive(updateDistances);
 }
 
 
@@ -110,31 +128,61 @@ void parseCommandPacket(char *commandPacket)
   delay((int)parameters[2]);
   colin.drive(0, 0.0);
   delay(250);
-  printPose();
+  sendPose();
+  requestSonarUpdate();
+  while(!distancesRead);
+  sendDistances();
 }
 
-void printParameters(double *parameters)
-{
-  Serial.print("executing command \ntranslational: ");
-  Serial.print((int)parameters[0]);
-  Serial.print(" mm/s \nangular: ");
-  Serial.print(parameters[1]);
-  Serial.print(" rad/s \ntime: ");
-  Serial.print((int)parameters[2]);
-  Serial.println(" sec");
-  Serial.println();
-}
-
-void printPose()
+// sends pose from odometry to raspberry pi
+void sendPose()
 {
   colin.getPosition(x, y, theta);
   Serial.print(SOP);
+  Serial.print(ODT);
+  Serial.print(DEL);
   Serial.print((int)x, DEC);
   Serial.print(DEL);
   Serial.print((int)y, DEC);
   Serial.print(DEL);
   Serial.print(theta, 3);
   Serial.print(EOP);
+}
+
+void updateDistances(int bytes)
+{
+  for (int i = 0; i < NUM_SONAR; i++)
+    readSonar(i);
+  distancesRead = true;
+}
+
+// read distances from sonar
+void readSonar(int index)
+{
+  int firstByte = Wire.read();
+  int secondByte = Wire.read();
+  sonarDistances[index] = ((secondByte << 8) | firstByte) * speedOfSound;
+}
+
+// send updated sonar distance array to the raspberry pi
+void sendDistances()
+{
+  Serial.print(SOP);
+  Serial.print(SON);
+  for (int i = 0; i < NUM_SONAR; i++)
+  {
+    Serial.print(DEL);
+    Serial.print(sonarDistances[i]);
+  }
+  Serial.print(EOP);
+}
+
+void requestSonarUpdate(int index)
+{
+  distancesRead = false;
+  Wire.beginTransmission(SONAR_ADDRESS);
+  Wire.write(x);
+  Wire.endTransmission();
 }
 
 void readLHEncoder()
