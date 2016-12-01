@@ -39,6 +39,7 @@ DifferentialDrive colin(&lhPosition, &rhPosition,
 double x, y; 
 double theta;
 int index = 0;
+int time, lastCommandTime;
 
 
 void setup() {
@@ -62,7 +63,10 @@ void setup() {
 
 void loop() 
 {
+  time = millis();
   readCommandPacket();
+  if (time - lastCommandTime > 1000)
+    colin.drive(0, 0.0);
 }
 
 void readCommandPacket()
@@ -104,6 +108,7 @@ void readCommandPacket()
 
 void parseCommandPacket(char *commandPacket)
 {
+  lastCommandTime = millis();
   int index = 0;
   double parameters[3];
   for (int i = 0; i < 3; i++)
@@ -125,27 +130,21 @@ void parseCommandPacket(char *commandPacket)
   started = false;
   ended = false;
   colin.drive((int)parameters[0], parameters[1]);
-  delay((int)parameters[2]);
-  colin.drive(0, 0.0);
-  delay(250);
-  sendPose();
   requestSonarUpdate();
   while(!distancesRead);
-  sendDistances();
+  sendSensorPacket();
 }
 
 // sends pose from odometry to raspberry pi
-void sendPose()
+void sendSensorPacket()
 {
   colin.getPosition(x, y, theta);
-  Serial.print(SOP);
-  Serial.print(ODT);
-  Serial.print(DEL);
+  sendDistances();
   Serial.print((int)x, DEC);
   Serial.print(DEL);
   Serial.print((int)y, DEC);
   Serial.print(DEL);
-  Serial.print(theta, 3);
+  Serial.print((int)(theta * 1000));
   Serial.print(EOP);
 }
 
@@ -168,13 +167,11 @@ void readSonar(int index)
 void sendDistances()
 {
   Serial.print(SOP);
-  Serial.print(SON);
   for (int i = 0; i < NUM_SONAR; i++)
   {
-    Serial.print(DEL);
     Serial.print(sonarDistances[i]);
+    Serial.print(DEL);
   }
-  Serial.print(EOP);
 }
 
 void requestSonarUpdate(int index)
