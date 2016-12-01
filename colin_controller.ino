@@ -10,18 +10,16 @@
 #define NUM_CONTROLLERS        1
 
 int sonarDistances[NUM_SONAR]; // array of ping times from sonar sensors
-const uint8_t x = 1; // meaningless value to trigger update
+const uint8_t trig = 1; // meaningless value to trigger update
 const double speedOfSound = 0.0343; // in cm/microsecond
-bool distancesRead = false;
+bool distancesRead;
+bool commandReceived;
+bool started;
+bool ended;
 
 const char SOP = '<'; // designates start of packet
 const char EOP = '>'; // designates end of packet
 const char DEL = ','; // delimits between values
-const char SON = 'S'; // designates sonar packet
-const char ODT = 'O'; // designates odometry packet
-
-bool started = false;
-bool ended = false;
 
 Motor rhMotor(RH_DIR1, RH_DIR2, RH_PWM);
 Encoder rhEncoder(RH_ENCODER_A, RH_ENCODER_B, deltaT, ticksPerRev);
@@ -58,13 +56,36 @@ void setup() {
   // begin communication with sonar controller
   Wire.begin(OWN_ADDRESS);
   Wire.onReceive(updateDistances);
+  
+  distancesRead = false;
+  commandReceived = false;
+  started = false;
+  ended = false;
 }
 
 
 void loop() 
 {
   time = millis();
+  
+  // check if a command packet is available to read
   readCommandPacket();
+  
+  // request a sensor update if a command has been received
+  if (commandReceived)
+  {
+    commandReceived = false;
+    requestSonarUpdate(SONAR_ADDRESS);
+  }
+  
+  // send sensor packet if sonar has finished updating
+  if (distancesRead)
+  {
+    distancesRead = false; 
+    sendSensorPacket();
+  }
+  
+  // stop colin if a command packet has not been received for 1s
   if (time - lastCommandTime > 1000)
     colin.drive(0, 0.0);
 }
@@ -110,8 +131,8 @@ void parseCommandPacket(char *commandPacket)
 {
   lastCommandTime = millis();
   int index = 0;
-  double parameters[3];
-  for (int i = 0; i < 3; i++)
+  int parameters[2];
+  for (int i = 0; i < 2; i++)
   {
     char buf[10];
     memset(buf, '\0', sizeof(buf));
@@ -122,17 +143,15 @@ void parseCommandPacket(char *commandPacket)
       bufIndex++;
       index++;
     }
-    parameters[i] = atof(buf);
+    parameters[i] = atoi(buf);
     index++;
     bufIndex = 0;
     memset(buf, '\0', sizeof(buf));
   }
   started = false;
   ended = false;
-  colin.drive((int)parameters[0], parameters[1]);
-  requestSonarUpdate();
-  while(!distancesRead);
-  sendSensorPacket();
+  colin.drive(parameters[0], (double)parameters[1] / 1000.0);
+  commandReceived = true;
 }
 
 // sends pose from odometry to raspberry pi
@@ -140,9 +159,9 @@ void sendSensorPacket()
 {
   colin.getPosition(x, y, theta);
   sendDistances();
-  Serial.print((int)x, DEC);
+  Serial.print((int)x);
   Serial.print(DEL);
-  Serial.print((int)y, DEC);
+  Serial.print((int)y);
   Serial.print(DEL);
   Serial.print((int)(theta * 1000));
   Serial.print(EOP);
@@ -174,11 +193,10 @@ void sendDistances()
   }
 }
 
-void requestSonarUpdate(int index)
+void requestSonarUpdate(int address)
 {
-  distancesRead = false;
-  Wire.beginTransmission(SONAR_ADDRESS);
-  Wire.write(x);
+  Wire.beginTransmission(address);
+  Wire.write(trig);
   Wire.endTransmission();
 }
 
