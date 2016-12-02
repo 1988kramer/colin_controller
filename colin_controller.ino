@@ -137,7 +137,6 @@ void readCommandPacket()
 void parseCommandPacket(char *commandPacket)
 {
   lastCommandTime = millis();
-  sendSensorPacket();
   int index = 0;
   int parameters[2];
   for (int i = 0; i < 2; i++)
