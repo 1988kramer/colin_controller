@@ -125,11 +125,19 @@ void readCommandPacket()
   {
     parseCommandPacket(commandPacket);
   }
+  /*
+  else
+  {
+    Serial.println("command packet not received");
+    Serial.println(commandPacket);
+  }
+  */
 }
 
 void parseCommandPacket(char *commandPacket)
 {
   lastCommandTime = millis();
+  sendSensorPacket();
   int index = 0;
   int parameters[2];
   for (int i = 0; i < 2; i++)
