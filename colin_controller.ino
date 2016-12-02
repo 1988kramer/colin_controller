@@ -3,7 +3,7 @@
 #include <TimerOne.h>
 #include <Wire.h>
 
-#define SONAR_ADDRESS        0x8
+#define SONAR_ADDRESS        0x8  // double check this value
 #define OWN_ADDRESS          0x6
 #define NUM_SONAR              8
 #define SONAR_PER_CONTROLLER   8
@@ -36,8 +36,8 @@ DifferentialDrive colin(&lhPosition, &rhPosition,
 
 double x, y; 
 double theta;
-int index = 0;
-int time, lastCommandTime;
+int index;
+int lastCommandTime;
 
 
 void setup() {
@@ -61,13 +61,13 @@ void setup() {
   commandReceived = false;
   started = false;
   ended = false;
+  index = 0;
+  lastCommandTime = millis();
 }
 
 
 void loop() 
-{
-  time = millis();
-  
+{ 
   // check if a command packet is available to read
   readCommandPacket();
   
@@ -77,7 +77,6 @@ void loop()
     commandReceived = false;
     requestSonarUpdate(SONAR_ADDRESS);
   }
-  
   // send sensor packet if sonar has finished updating
   if (distancesRead)
   {
@@ -85,8 +84,8 @@ void loop()
     sendSensorPacket();
   }
   
-  // stop colin if a command packet has not been received for 1s
-  if (time - lastCommandTime > 1000)
+  // stop colin if a command packet has not been received for 2 seconds
+  if (millis() - lastCommandTime > 2000)
     colin.drive(0, 0.0);
 }
 
@@ -136,29 +135,27 @@ void readCommandPacket()
 
 void parseCommandPacket(char *commandPacket)
 {
-  lastCommandTime = millis();
-  int index = 0;
-  int parameters[2];
+  int packetIndex = 0;
+  int speeds[2];
   for (int i = 0; i < 2; i++)
   {
     char buf[10];
     memset(buf, '\0', sizeof(buf));
-    char bufIndex = 0;
-    while (commandPacket[index] != DEL && commandPacket[index] != '\0') 
+    int bufIndex = 0;
+    while (commandPacket[packetIndex] != DEL && commandPacket[packetIndex] != '\0') 
     {
-      buf[bufIndex] = commandPacket[index];
+      buf[bufIndex] = commandPacket[packetIndex];
       bufIndex++;
-      index++;
+      packetIndex++;
     }
-    parameters[i] = atoi(buf);
-    index++;
-    bufIndex = 0;
-    memset(buf, '\0', sizeof(buf));
+    speeds[i] = atoi(buf);
+    packetIndex++;
   }
   started = false;
   ended = false;
-  colin.drive(parameters[0], (double)parameters[1] / 1000.0);
+  colin.drive(speeds[0], ((double)speeds[1]) / 1000.0);
   commandReceived = true;
+  lastCommandTime = millis();
 }
 
 // sends pose from odometry to raspberry pi
