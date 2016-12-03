@@ -83,7 +83,6 @@ void loop()
     distancesRead = false; 
     sendSensorPacket();
   }
-  
   // stop colin if a command packet has not been received for 2 seconds
   if (millis() - lastCommandTime > 2000)
     colin.drive(0, 0.0);
@@ -154,6 +153,7 @@ void parseCommandPacket(char *commandPacket)
   started = false;
   ended = false;
   colin.drive(speeds[0], ((double)speeds[1]) / 1000.0);
+  
   commandReceived = true;
   lastCommandTime = millis();
 }
