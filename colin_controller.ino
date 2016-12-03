@@ -14,8 +14,6 @@ const uint8_t trig = 1; // meaningless value to trigger update
 const double speedOfSound = 0.0343; // in cm/microsecond
 bool distancesRead;
 bool commandReceived;
-bool started;
-bool ended;
 
 const char SOP = '<'; // designates start of packet
 const char EOP = '>'; // designates end of packet
@@ -36,12 +34,12 @@ DifferentialDrive colin(&lhPosition, &rhPosition,
 
 double x, y; 
 double theta;
-int index;
 int lastCommandTime;
 
 
 void setup() {
   Serial.begin(9600); // start serial with Raspberry Pi
+  Serial.setTimeout(100);
   
   // start timer and hardware interrupts
   Timer1.initialize(deltaT);
@@ -59,9 +57,7 @@ void setup() {
   
   distancesRead = false;
   commandReceived = false;
-  started = false;
-  ended = false;
-  index = 0;
+
   lastCommandTime = millis();
 }
 
@@ -91,71 +87,71 @@ void loop()
 void readCommandPacket()
 {
   char commandPacket[32];
-  while (Serial.available() > 0)
+  memset(commandPacket, '\0', 32);
+  bool started = false;
+  bool ended = false;
+  int index = 0;
+  int result = Serial.readBytes(commandPacket,32);
+  if (result > 0)
   {
-    char inChar = Serial.read();
-    if (!started)
-    {
-      if (inChar == SOP)
-      {
-        index = 0;
-        commandPacket[index] = '\0';
-        started = true;
-        ended = false;
-      }
-    }
-    else if (!ended)
-    {
-      if (inChar == EOP)
-      {
-        ended = true;
-      }
-      else
-      {
-        commandPacket[index] = inChar;
-        index++;
-        commandPacket[index] = '\0';
-      }
-    }
-  }
-
-  if (started && ended)
-  {
+    //Serial.println(commandPacket);
     parseCommandPacket(commandPacket);
   }
-  /*
-  else
-  {
-    Serial.println("command packet not received");
-    Serial.println(commandPacket);
-  }
-  */
 }
 
 void parseCommandPacket(char *commandPacket)
 {
+  bool started = false;
+  bool ended = false;
   int packetIndex = 0;
   int speeds[2];
-  for (int i = 0; i < 2; i++)
+  int speedsIndex = 0;
+  while (!started && packetIndex < 32)
   {
-    char buf[10];
-    memset(buf, '\0', sizeof(buf));
-    int bufIndex = 0;
-    while (commandPacket[packetIndex] != DEL && commandPacket[packetIndex] != '\0') 
-    {
-      buf[bufIndex] = commandPacket[packetIndex];
-      bufIndex++;
-      packetIndex++;
-    }
-    speeds[i] = atoi(buf);
+    if (commandPacket[packetIndex] == SOP)
+      started = true;
     packetIndex++;
   }
-  started = false;
-  ended = false;
-  colin.drive(speeds[0], ((double)speeds[1]) / 1000.0);
   
-  commandReceived = true;
-  lastCommandTime = millis();
+  int bufferSize = 10;
+  char buffer[bufferSize];
+  memset(buffer, '\0', bufferSize);
+  int bufferIndex = 0;
+  
+  while (!ended && packetIndex < 32 && speedsIndex < 2)
+  {
+    if (commandPacket[packetIndex] == DEL)
+    {
+      bufferIndex = 0;
+      speeds[speedsIndex] = atoi(buffer);
+      memset(buffer, '\0', bufferSize);
+      speedsIndex++;
+    }
+    else if (commandPacket[packetIndex] == EOP)
+    {
+      ended = true;
+      speeds[speedsIndex] = atoi(buffer);
+    }
+    else
+    {
+      buffer[bufferIndex] = commandPacket[packetIndex];
+      bufferIndex++;
+    }
+    packetIndex++;
+  }
+  /*
+  Serial.print("speeds ");
+  Serial.print(speeds[0]);
+  Serial.print(" ");
+  Serial.println(speeds[1]);
+  */
+  if (started && ended)
+  {
+    colin.drive(speeds[0], ((double)speeds[1]) / 1000.0);
+    commandReceived = true;
+    lastCommandTime = millis();
+  }
+
 }
 
 // sends pose from odometry to raspberry pi
