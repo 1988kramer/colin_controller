@@ -3,7 +3,7 @@
 #include <TimerOne.h>
 #include <Wire.h>
 
-#define SONAR_ADDRESS        0x8  // double check this value
+#define SONAR_ADDRESS        0x4
 #define OWN_ADDRESS          0x6
 #define NUM_SONAR              8
 #define SONAR_PER_CONTROLLER   8
