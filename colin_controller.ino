@@ -34,7 +34,11 @@ DifferentialDrive colin(&lhPosition, &rhPosition,
 
 double x, y; 
 double theta;
-int lastCommandTime;
+unsigned long lastCommandTime, currentTime;
+
+// for testing purposes only
+int translational;
+double angular;
 
 
 void setup() {
@@ -59,6 +63,10 @@ void setup() {
   commandReceived = false;
 
   lastCommandTime = millis();
+  currentTime = millis();
+  
+  translational = 0;
+  angular = 0.0;
 }
 
 
@@ -79,9 +87,14 @@ void loop()
     distancesRead = false; 
     sendSensorPacket();
   }
-  // stop colin if a command packet has not been received for 2 seconds
-  if (millis() - lastCommandTime > 2000)
+  currentTime = millis();
+  // stop colin if a command packet has not been received for 1 second
+  if (currentTime - lastCommandTime > 1000)
+  {
+    Serial.println("command not received for 1 second");
+    lastCommandTime = millis();
     colin.drive(0, 0.0);
+  }
 }
 
 void readCommandPacket()
@@ -94,7 +107,6 @@ void readCommandPacket()
   int result = Serial.readBytes(commandPacket,32);
   if (result > 0)
   {
-    //Serial.println(commandPacket);
     parseCommandPacket(commandPacket);
   }
 }
@@ -139,24 +151,31 @@ void parseCommandPacket(char *commandPacket)
     }
     packetIndex++;
   }
-  /*
-  Serial.print("speeds ");
-  Serial.print(speeds[0]);
-  Serial.print(" ");
-  Serial.println(speeds[1]);
-  */
+  
   if (started && ended)
   {
-    colin.drive(speeds[0], ((double)speeds[1]) / 1000.0);
+    translational = speeds[0];
+    angular = ((double)speeds[1]) / 1000.0;
+    colin.drive(translational, angular);
     commandReceived = true;
     lastCommandTime = millis();
   }
-
+  else
+  {
+    Serial.println("Bad command packet");
+  }
 }
 
 // sends pose from odometry to raspberry pi
 void sendSensorPacket()
 {
+  /*
+  Serial.print("speeds ");
+  Serial.print(translational);
+  Serial.print(" ");
+  Serial.print(angular);
+  Serial.print(" ");
+  */
   colin.getPosition(x, y, theta);
   sendDistances();
   Serial.print((int)x);
