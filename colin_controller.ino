@@ -110,7 +110,7 @@ void readCommandPacket()
     commands[i] = (secondByte << 8) | firstByte;
   }
   
-  if (result > 0)
+  if (result == 4) // if the correct number of bytes has been received
   {
     translational = commands[0];
     angular = (double)commands[1] / 1000.0;
