@@ -118,10 +118,11 @@ void readCommandPacket()
     commandReceived = true;
     lastCommandTime = millis();
   }
-  else
+  else if (result > 0)
   {
-    Serial.println("Bad command");
+    Serial.println("incomplete command");
   }
+  // else do nothing and try again later
 }
 
 // sends pose from odometry to raspberry pi
