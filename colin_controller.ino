@@ -99,70 +99,28 @@ void loop()
 
 void readCommandPacket()
 {
-  char commandPacket[32];
-  memset(commandPacket, '\0', 32);
-  bool started = false;
-  bool ended = false;
-  int index = 0;
-  int result = Serial.readBytes(commandPacket,32);
+  byte buffer[4];
+  int result = Serial.readBytes(buffer, 4);
+  int commands[2];
+  
+  for (int i = 0; i < 2; i++)
+  {
+    byte firstByte = buffer[2 * i];
+    byte secondByte = buffer[(2 * i) + 1];
+    commands[i] = (secondByte << 2) | firstByte;
+  }
+  
   if (result > 0)
   {
-    parseCommandPacket(commandPacket);
-  }
-}
-
-void parseCommandPacket(char *commandPacket)
-{
-  bool started = false;
-  bool ended = false;
-  int packetIndex = 0;
-  int speeds[2];
-  int speedsIndex = 0;
-  while (!started && packetIndex < 32)
-  {
-    if (commandPacket[packetIndex] == SOP)
-      started = true;
-    packetIndex++;
-  }
-  
-  int bufferSize = 10;
-  char buffer[bufferSize];
-  memset(buffer, '\0', bufferSize);
-  int bufferIndex = 0;
-  
-  while (!ended && packetIndex < 32 && speedsIndex < 2)
-  {
-    if (commandPacket[packetIndex] == DEL)
-    {
-      bufferIndex = 0;
-      speeds[speedsIndex] = atoi(buffer);
-      memset(buffer, '\0', bufferSize);
-      speedsIndex++;
-    }
-    else if (commandPacket[packetIndex] == EOP)
-    {
-      ended = true;
-      speeds[speedsIndex] = atoi(buffer);
-    }
-    else
-    {
-      buffer[bufferIndex] = commandPacket[packetIndex];
-      bufferIndex++;
-    }
-    packetIndex++;
-  }
-  
-  if (started && ended)
-  {
-    translational = speeds[0];
-    angular = ((double)speeds[1]) / 1000.0;
+    translational = commands[0];
+    angular = (double)commands[1] / 1000.0;
     colin.drive(translational, angular);
     commandReceived = true;
     lastCommandTime = millis();
   }
   else
   {
-    Serial.println("Bad command packet");
+    Serial.println("Bad command");
   }
 }
 
