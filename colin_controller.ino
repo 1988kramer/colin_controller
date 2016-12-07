@@ -105,8 +105,8 @@ void readCommandPacket()
   
   for (int i = 0; i < 2; i++)
   {
-    byte firstByte = buffer[2 * i];
-    byte secondByte = buffer[(2 * i) + 1];
+    int firstByte = buffer[2 * i];
+    int secondByte = buffer[(2 * i) + 1];
     commands[i] = (secondByte << 8) | firstByte;
   }
   
