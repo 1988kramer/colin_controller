@@ -107,7 +107,7 @@ void readCommandPacket()
   {
     byte firstByte = buffer[2 * i];
     byte secondByte = buffer[(2 * i) + 1];
-    commands[i] = (secondByte << 2) | firstByte;
+    commands[i] = (secondByte << 8) | firstByte;
   }
   
   if (result > 0)
@@ -135,13 +135,15 @@ void sendSensorPacket()
   Serial.print(" ");
   */
   colin.getPosition(x, y, theta);
-  sendDistances();
-  Serial.print((int)x);
-  Serial.print(DEL);
-  Serial.print((int)y);
-  Serial.print(DEL);
-  Serial.print((int)(theta * 1000));
-  Serial.print(EOP);
+  byte buffer[22];
+  addDistances(buffer);
+  buffer[16] = (byte)((int)x & 0xFF);
+  buffer[17] = (byte)(((int)x >> 8) & 0xFF);
+  buffer[18] = (byte)((int)y & 0xFF);
+  buffer[19] = (byte)(((int)y >> 8) & 0xFF);
+  buffer[20] = (byte)((int)(theta * 1000.0) & 0xFF);
+  buffer[21] = (byte)(((int)(theta * 1000.0) >> 8) & 0xFF);
+  Serial.write(buffer, 22);
 }
 
 void updateDistances(int bytes)
@@ -160,13 +162,12 @@ void readSonar(int index)
 }
 
 // send updated sonar distance array to the raspberry pi
-void sendDistances()
+void addDistances(byte* buffer)
 {
-  Serial.print(SOP);
-  for (int i = 0; i < NUM_SONAR; i++)
+  for (int i = 0; i < NUM_SONAR)
   {
-    Serial.print(sonarDistances[i]);
-    Serial.print(DEL);
+    buffer[2 * i] = (byte)(sonarDistances[i] & 0xFF);
+    buffer[(2 * i) + 1] = (byte)((sonarDistances[i] >> 8) & 0xFF);
   }
 }
 
