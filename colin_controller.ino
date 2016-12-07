@@ -100,7 +100,7 @@ void loop()
 void readCommandPacket()
 {
   byte buffer[4];
-  int result = Serial.readBytes(buffer, 4);
+  int result = Serial.readBytes((char*)buffer, 4);
   int commands[2];
   
   for (int i = 0; i < 2; i++)
@@ -164,7 +164,7 @@ void readSonar(int index)
 // send updated sonar distance array to the raspberry pi
 void addDistances(byte* buffer)
 {
-  for (int i = 0; i < NUM_SONAR)
+  for (int i = 0; i < NUM_SONAR; i++)
   {
     buffer[2 * i] = (byte)(sonarDistances[i] & 0xFF);
     buffer[(2 * i) + 1] = (byte)((sonarDistances[i] >> 8) & 0xFF);
