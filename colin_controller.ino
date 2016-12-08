@@ -138,12 +138,15 @@ void sendSensorPacket()
   colin.getPosition(x, y, theta);
   byte buffer[22];
   addDistances(buffer);
-  buffer[16] = (byte)((int)x & 0xFF);
-  buffer[17] = (byte)(((int)x >> 8) & 0xFF);
-  buffer[18] = (byte)((int)y & 0xFF);
-  buffer[19] = (byte)(((int)y >> 8) & 0xFF);
-  buffer[20] = (byte)((int)(theta * 1000.0) & 0xFF);
-  buffer[21] = (byte)(((int)(theta * 1000.0) >> 8) & 0xFF);
+  int sendX = (int)x;
+  int sendY = (int)y;
+  int sendTheta = (int)(theta * 1000.0);
+  buffer[16] = (byte)(sendX & 0xFF);
+  buffer[17] = (byte)((sendX >> 8) & 0xFF);
+  buffer[18] = (byte)(sendY & 0xFF);
+  buffer[19] = (byte)((sendY >> 8) & 0xFF);
+  buffer[20] = (byte)(sendTheta & 0xFF);
+  buffer[21] = (byte)((sendTheta >> 8) & 0xFF);
   Serial.write(buffer, 22);
 }
 
