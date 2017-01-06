@@ -69,6 +69,8 @@ DifferentialDrive colin(&lhPosition, &rhPosition,
 double x, y; 
 double theta;
 unsigned long lastCommandTime, currentTime;
+const int kSensorPacketSize = 22;
+const int kCommandPacketSize = 4;
 
 int translational; // current translational speed in cm/s
 double angular; // current angular velocity in rad/s 
@@ -135,24 +137,26 @@ void loop()
 // and sets Colin's speeds accordingly
 void readCommandPacket()
 {
-  byte buffer[4];
-  int result = Serial.readBytes((char*)buffer, 4);
+  byte buffer[kCommandPacketSize];
+  int result = Serial.readBytes((char*)buffer, kCommandPacketSize);
 
-  if (result == 4) // if the correct number of bytes has been received
+  if (result == kCommandPacketSize) // if the correct number of bytes has been received
   {
-    int commands[2];
+    int commands[kCommandPacketSize / 2];
     
     // assemble 16 bit ints from the received bytes in the buffer
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < kCommandPacketSize / 2; i++)
     {
       int firstByte = buffer[2 * i];
       int secondByte = buffer[(2 * i) + 1];
       commands[i] = (secondByte << 8) | firstByte;
     }
-    // if raspberry pi sends reset command reset pose
+    // if raspberry pi sends reset command, reset pose and send blank acknowledgement packet
     if (commands[0] == 0xFFFF && commands[1] == 0xFFFF)
     {
       colin.resetPosition();
+      byte resetACK[kSensorPacketSize] = {0};
+      Serial.write(resetACK, kSensorPacketSize);
     }
     else
     {
@@ -176,7 +180,7 @@ void readCommandPacket()
 void sendSensorPacket()
 {
   colin.getPosition(x, y, theta);
-  byte buffer[22];
+  byte buffer[kSensorPacketSize];
   addDistances(buffer);
   int sendX = (int)x;
   int sendY = (int)y;
@@ -187,7 +191,7 @@ void sendSensorPacket()
   buffer[19] = (byte)((sendY >> 8) & 0xFF);
   buffer[20] = (byte)(sendTheta & 0xFF);
   buffer[21] = (byte)((sendTheta >> 8) & 0xFF);
-  Serial.write(buffer, 22);
+  Serial.write(buffer, kSensorPacketSize);
 }
 
 // updates sonar distance measurements when a new reading is available
