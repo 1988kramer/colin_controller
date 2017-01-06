@@ -46,7 +46,7 @@ void loop()
 	if (readCommandPacket(commands) == 1)
 	{
 		sendACK();
-		executeCommands(commandPacket);
+		executeCommands(commands);
 	}
 }
 
@@ -59,8 +59,8 @@ int readCommandPacket(int* commands)
 	{
 		for (int i = 0; i < commandPacketLength / 2; i++)
 		{
-			int firtByte = commandPacket[2 * i];
-			int secondByte = commandPacket[(2 * i) + 1);
+			int firstByte = commandPacket[2 * i];
+			int secondByte = commandPacket[(2 * i) + 1];
 			commands[i] = (secondByte << 8) | firstByte;
 		}
 		return 1;
@@ -75,11 +75,11 @@ void executeCommands(int* commands)
 {
 	double newKP = ((double)commands[3]) / 10000.0;
 	double newKI = ((double)commands[4]) / 10000.0;
-	double newkD = ((double)commands[5]) / 10000.0;
+	double newKD = ((double)commands[5]) / 10000.0;
 	
 	// set new PID gains for both motors
 	rhSpeedControl.setGains(newKP, newKI, newKD);
-	lsSpeedControl.setGains(newKP, newKI, newKD);
+	lhSpeedControl.setGains(newKP, newKI, newKD);
 	
 	// set speed for the specified time 
 	double angular = ((double)commands[1]) / 10000.0;
@@ -92,3 +92,23 @@ void sendACK()
 {
 	Serial.print(ACK);
 }
+
+// updates the left hand encoder when a left hand encoder event is triggered
+void readLHEncoder()
+{
+  lhEncoder.updateCount();
+}
+
+// updates the right hand encoder when a right hand encoder event is triggered
+void readRHEncoder()
+{
+  rhEncoder.updateCount();
+}
+
+// updates colin's position and motor speeds
+// should be run every 50ms using a timer interrupt
+void adjust()
+{
+  colin.update();
+}
+
