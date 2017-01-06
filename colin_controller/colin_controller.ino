@@ -19,6 +19,11 @@
 // If a command packet is not received for more than one second, the robot assumes there is a communication
 // problem and stops moving until another command is received
 
+// RESET COMMAND: 
+//    If all bytes in the command packet are 0xF, this will be 
+//    interpreted as a command for Colin to reset his pose variables to zero.
+//    This should be done whenever a new program starts on the raspberry pi.
+
 // SENSOR PACKETS
 // After successfully receiving a command and updating speeds, the robot updates 
 // its sensors and sends a packet containing the sensor values in response.
@@ -144,10 +149,18 @@ void readCommandPacket()
       int secondByte = buffer[(2 * i) + 1];
       commands[i] = (secondByte << 8) | firstByte;
     }
-    translational = commands[0]; 
-    angular = (double)commands[1] / 1000.0; // convert received int to double angular velocity
-    colin.drive(translational, angular); // set Colin's speeds
-    commandReceived = true;
+    // if raspberry pi sends reset command reset pose
+    if (commands[0] == 0xFF && commands[1] == 0xFF)
+    {
+      colin.resetPosition();
+    }
+    else
+    {
+      translational = commands[0]; 
+      angular = (double)commands[1] / 1000.0; // convert received int to double angular velocity
+      colin.drive(translational, angular); // set Colin's speeds
+      commandReceived = true;
+    }
     lastCommandTime = millis();
   }
   else if (result > 0)
