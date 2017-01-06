@@ -150,7 +150,7 @@ void readCommandPacket()
       commands[i] = (secondByte << 8) | firstByte;
     }
     // if raspberry pi sends reset command reset pose
-    if (commands[0] == 0xFF && commands[1] == 0xFF)
+    if (commands[0] == 0xFFFF && commands[1] == 0xFFFF)
     {
       colin.resetPosition();
     }
