@@ -143,23 +143,30 @@ void readCommandPacket()
   if (result == kCommandPacketSize) // if the correct number of bytes has been received
   {
     int commands[kCommandPacketSize / 2];
-    
-    // assemble 16 bit ints from the received bytes in the buffer
-    for (int i = 0; i < kCommandPacketSize / 2; i++)
+    boolean reset = true;
+    for (int i = 0; i < kCommandPacketSize; i++)
     {
-      int firstByte = buffer[2 * i];
-      int secondByte = buffer[(2 * i) + 1];
-      commands[i] = (secondByte << 8) | firstByte;
+      if (buffer[i] != 0xFF) reset = false;
     }
     // if raspberry pi sends reset command, reset pose and send blank acknowledgement packet
-    if (commands[0] == 0xFFFF && commands[1] == 0xFFFF)
+    if (reset)
     {
       colin.resetPosition();
-      byte resetACK[kSensorPacketSize] = {0};
+      byte resetACK[kSensorPacketSize];
+      for (int i = 0; i < kSensorPacketSize; i++)
+        resetACK[i] = 0xFF;
+      delay(10);
       Serial.write(resetACK, kSensorPacketSize);
     }
     else
     {
+      // assemble 16 bit ints from the received bytes in the buffer
+      for (int i = 0; i < kCommandPacketSize / 2; i++)
+      {
+        unsigned int firstByte = buffer[2 * i];
+        unsigned int secondByte = buffer[(2 * i) + 1];
+        commands[i] = (secondByte << 8) | firstByte;
+      }
       translational = commands[0]; 
       angular = (double)commands[1] / 1000.0; // convert received int to double angular velocity
       colin.drive(translational, angular); // set Colin's speeds
