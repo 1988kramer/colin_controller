@@ -138,7 +138,7 @@ void loop()
 void readCommandPacket()
 {
   byte buffer[kCommandPacketSize];
-  int result = Serial.readBytes((char*)buffer, kCommandPacketSize);
+  int result = Serial.readBytes(buffer, kCommandPacketSize);
 
   if (result == kCommandPacketSize) // if the correct number of bytes has been received
   {
@@ -148,23 +148,21 @@ void readCommandPacket()
     {
       if (buffer[i] != 0xFF) reset = false;
     }
-    // if raspberry pi sends reset command, reset pose and send blank acknowledgement packet
+    // if raspberry pi sends reset command, reset pose and send ACK byte
     if (reset)
     {
       colin.resetPosition();
-      byte resetACK[kSensorPacketSize];
-      for (int i = 0; i < kSensorPacketSize; i++)
-        resetACK[i] = 0xFF;
       delay(10);
-      Serial.write(resetACK, kSensorPacketSize);
+      byte resetACK = 0xFF;
+      Serial.write(&resetACK, 1);
     }
     else
     {
       // assemble 16 bit ints from the received bytes in the buffer
       for (int i = 0; i < kCommandPacketSize / 2; i++)
       {
-        unsigned int firstByte = buffer[2 * i];
-        unsigned int secondByte = buffer[(2 * i) + 1];
+        byte firstByte = buffer[2 * i];
+        byte secondByte = buffer[(2 * i) + 1];
         commands[i] = (secondByte << 8) | firstByte;
       }
       translational = commands[0]; 
