@@ -192,7 +192,7 @@ void readSonar(int index)
 {
   int firstByte = Wire.read();
   int secondByte = Wire.read();
-  sonarDistances[index] = ((double)((secondByte << 8) | firstByte)) * speedOfSound * 0.5;
+  sonarDistances[index] = ((double)((secondByte << 8) | firstByte)) * speedOfSound;
 }
 
 // adds sonar distance readings to the buffer to be sent to the Raspberry Pi
