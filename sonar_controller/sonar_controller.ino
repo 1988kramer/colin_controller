@@ -58,7 +58,7 @@ void updatePingTimes(uint8_t bytes)
   TinyWireS.receive();
   for (int i = 0; i < NUM_SONAR; i++)
   {
-    pingTimes[i] = sonar[i].ping();
+    pingTimes[i] = sonar[i].ping(); // returns 2-way time of flight for ultrasonic pulse
   }
   sendTimes();
 }

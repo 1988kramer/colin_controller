@@ -44,6 +44,7 @@
 
 int sonarDistances[NUM_SONAR]; // array of ping times from sonar sensors
 const uint8_t trig = 1; // meaningless value to trigger update
+const uint8_t sonarArrayRadius = 175; // in microseconds
 const double speedOfSound = 0.0343; // in cm/microsecond
 bool distancesRead; // true if a sonar update has been received and successfully parsed
 bool commandReceived; // true if a command packet has been received and successfully parsed
@@ -192,7 +193,8 @@ void readSonar(int index)
 {
   int firstByte = Wire.read();
   int secondByte = Wire.read();
-  sonarDistances[index] = ((double)((secondByte << 8) | firstByte)) * speedOfSound;
+  sonarDistances[index] = (((secondByte << 8) | firstByte)) + sonarArrayRadius; 
+  sonarDistances[index] = (double)sonarDistances[index] * speedOfSound * 0.5;
 }
 
 // adds sonar distance readings to the buffer to be sent to the Raspberry Pi
