@@ -41,6 +41,7 @@
 #define NUM_SONAR              8
 #define SONAR_PER_CONTROLLER   8
 #define NUM_CONTROLLERS        1
+#define LED_PIN                A3
 
 int sonarDistances[NUM_SONAR]; // array of ping times from sonar sensors
 const uint8_t trig = 1; // meaningless value to trigger update
@@ -73,6 +74,16 @@ double angular; // current angular velocity in rad/s
 void setup() {
   Serial.begin(9600); // start serial with Raspberry Pi
   Serial.setTimeout(100); 
+  
+  // blink LED to signal startup
+  pinMode(LED_PIN, OUTPUT);
+  for (int i = 0; i < 5; i++)
+  {
+    digitalWrite(LED_PIN, HIGH);
+    delay(200);
+    digitalWrite(LED_PIN, LOW);
+    delay(200);
+  }
   
   // start timer and hardware interrupts
   Timer1.initialize(deltaT);
